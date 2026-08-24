@@ -1,5 +1,5 @@
 --[[\
-    Omega Hub / Ultimate AI Assistant for Delta
+    True AI Assistant for Delta (Neural Network + Game Commands)
 ]]--
 
 local Players = game:GetService("Players")
@@ -7,16 +7,16 @@ local CoreGui = game:GetService("CoreGui")
 local PathfindingService = game:GetService("PathfindingService")
 local UserInputService = game:GetService("UserInputService")
 local TextService = game:GetService("TextService")
-local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Очистка старого интерфейса
-if CoreGui:FindFirstChild("UltimateAIChat") then
-    CoreGui.UltimateAIChat:Destroy()
+if CoreGui:FindFirstChild("TrueAIChat") then
+    CoreGui.TrueAIChat:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "UltimateAIChat"
+ScreenGui.Name = "TrueAIChat"
 ScreenGui.ResetOnSpawn = false
 
 pcall(function()
@@ -58,12 +58,12 @@ TopBar.ZIndex = 91
 TopBar.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "  🤖 ULTIMATE AI"
+Title.Text = "  🤖 TRUE AI ASSISTANT"
 Title.Size = UDim2.new(1, -35, 1, 0)
 Title.BackgroundTransparency = 1
 Title.TextColor3 = Color3.fromRGB(0, 200, 255)
 Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 12
+Title.TextSize = 11
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.ZIndex = 92
 Title.Parent = TopBar
@@ -101,7 +101,7 @@ InputBox.Size = UDim2.new(1, -44, 0, 32)
 InputBox.Position = UDim2.new(0, 5, 1, -37)
 InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 32)
 InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-InputBox.PlaceholderText = "Введи команду или 'подойди к [ник]'..."
+InputBox.PlaceholderText = "Спроси ИИ или 'подойди к [ник]'..."
 InputBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
 InputBox.Font = Enum.Font.SourceSans
 InputBox.TextSize = 12
@@ -176,10 +176,10 @@ end
 
 task.spawn(function()
     task.wait(0.3)
-    AddMsg("ai", "Привет! Напиши 'подойди к [ник]' или /help для команд.")
+    AddMsg("ai", "Привет! Я настоящий ИИ. Спроси меня о чем угодно или напиши 'подойди к [ник]'.")
 end)
 
--- Логика ИИ и команд
+-- Функция управления персонажем
 local function ApproachPlayer(targetName)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return "Нет персонажа!" end
@@ -213,7 +213,7 @@ local function ApproachPlayer(targetName)
                 if wp.Action == Enum.PathWaypointAction.Jump then char.Humanoid.Jump = true end
                 task.wait(0.25)
             end
-            AddMsg("ai", "Я дошел до игрока " .. targetPlayer.Name + "!")
+            AddMsg("ai", "Я дошел до игрока " .. targetPlayer.Name .. "!")
         else
             char.Humanoid:MoveTo(targetPos)
             AddMsg("ai", "Иду к игроку напрямую!")
@@ -223,25 +223,41 @@ local function ApproachPlayer(targetName)
     return "Строю путь к " .. targetPlayer.Name .. "..."
 end
 
-local function ProcessCommand(text)
-    local lower = text:lower()
+-- Обработка запросов через нейросеть
+local function GetAIResponse(prompt)
+    local lower = prompt:lower()
     
-    if lower == "/help" then
-        return "Команды:\n1. подойди к [ник]\n2. скан\n3. привет"
-    end
-    
+    -- Проверка на игровые команды
     local targetName = lower:match("подойди%s+к%s+(.+)") or lower:match("иди%s+к%s+(.+)")
     if targetName then
         return ApproachPlayer(targetName)
     end
     
-    if lower:find("привет") then
-        return "Здорово! Чем помочь в игре?"
-    elseif lower:find("скан") then
-        return "Сканер активен: игроков на сервере: " .. #Players:GetPlayers()
+    if lower == "/help" then
+        return "Команды:\n- Напиши любой вопрос (ИИ ответит)\n- 'подойди к [ник]' (идти к игроку)"
     end
     
-    return "Команда принята! Мой ИИ-модуль в игре обрабатывает запрос."
+    -- Запрос к реальной нейросети через публичный API
+    local responseText = nil
+    local success = pcall(function()
+        local req = (http_request or request or HttpService.RequestAsync)
+        if req then
+            local encodedPrompt = HttpService:UrlEncode("Отвечай кратко на русском языке: " .. prompt)
+            local res = req({
+                Url = "https://text.pollinations.ai/" .. encodedPrompt,
+                Method = "GET"
+            })
+            if res and res.Body and res.Body ~= "" then
+                responseText = res.Body
+            end
+        end
+    end)
+    
+    if success and responseText then
+        return responseText
+    else
+        return "Не удалось связаться с сервером ИИ. Проверь интернет в игре."
+    end
 end
 
 local function OnSubmit()
@@ -251,7 +267,7 @@ local function OnSubmit()
     InputBox.Text = ""
     
     task.spawn(function()
-        local reply = ProcessCommand(text)
+        local reply = GetAIResponse(text)
         AddMsg("ai", reply)
     end)
 end
@@ -259,4 +275,4 @@ end
 SendBtn.Activated:Connect(OnSubmit)
 InputBox.FocusLost:Connect(function(enter) if enter then OnSubmit() end end)
 
-print("Ultimate AI запущен!")
+print("True AI Assistant успешно запущен!")
