@@ -1,5 +1,5 @@
 --[[\
-    Ultimate Smart Local AI Assistant for Delta
+    Real Gemini AI Assistant for Delta
 ]]--
 
 local Players = game:GetService("Players")
@@ -7,6 +7,7 @@ local CoreGui = game:GetService("CoreGui")
 local PathfindingService = game:GetService("PathfindingService")
 local UserInputService = game:GetService("UserInputService")
 local TextService = game:GetService("TextService")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Очистка старого интерфейса
@@ -57,7 +58,7 @@ TopBar.ZIndex = 91
 TopBar.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "  🤖 SMART AI ASSISTANT"
+Title.Text = "  🤖 GEMINI AI ASSISTANT"
 Title.Size = UDim2.new(1, -35, 1, 0)
 Title.BackgroundTransparency = 1
 Title.TextColor3 = Color3.fromRGB(0, 200, 255)
@@ -100,7 +101,7 @@ InputBox.Size = UDim2.new(1, -44, 0, 32)
 InputBox.Position = UDim2.new(0, 5, 1, -37)
 InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 32)
 InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-InputBox.PlaceholderText = "Спроси ИИ или 'подойди к [ник]'..."
+InputBox.PlaceholderText = "Спроси Gemini или 'подойди к [ник]'..."
 InputBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
 InputBox.Font = Enum.Font.SourceSans
 InputBox.TextSize = 12
@@ -154,7 +155,7 @@ local function AddMsg(sender, text)
     msgFrame.Parent = ChatScroll
 
     local msgLabel = Instance.new("TextLabel")
-    msgLabel.Text = (sender == "ai" and "[AI]: " or "[Вы]: ") .. text
+    msgLabel.Text = (sender == "ai" and "[Gemini]: " or "[Вы]: ") .. text
     msgLabel.Size = UDim2.new(1, 0, 1, 0)
     msgLabel.BackgroundTransparency = 1
     msgLabel.TextColor3 = sender == "ai" and Color3.fromRGB(0, 220, 255) or Color3.fromRGB(240, 240, 240)
@@ -175,7 +176,7 @@ end
 
 task.spawn(function()
     task.wait(0.3)
-    AddMsg("ai", "Привет! Я твой автономный ИИ-ассистент. Напиши /help или спроси что-нибудь!")
+    AddMsg("ai", "Привет! Я Gemini. Спроси меня о чем угодно или напиши 'подойди к [ник]'.")
 end)
 
 -- Функция управления персонажем
@@ -197,7 +198,7 @@ local function ApproachPlayer(targetName)
         end
     end
     
-    if not targetPlayer then return "Игрок '" .. targetName .. "' не найден на сервере!" end
+    if not targetPlayer then return "Игрок не найден на сервере!" end
     local targetPos = targetPlayer.Character.HumanoidRootPart.Position
     
     task.spawn(function()
@@ -212,46 +213,70 @@ local function ApproachPlayer(targetName)
                 if wp.Action == Enum.PathWaypointAction.Jump then char.Humanoid.Jump = true end
                 task.wait(0.25)
             end
-            AddMsg("ai", "Я успешно дошел до " .. targetPlayer.Name .. "!")
+            AddMsg("ai", "Я дошел до игрока " .. targetPlayer.Name .. "!")
         else
             char.Humanoid:MoveTo(targetPos)
             AddMsg("ai", "Иду к игроку напрямую!")
         end
     end)
     
-    return "Строю маршрут к " .. targetPlayer.Name .. "..."
+    return "Строю путь к " .. targetPlayer.Name .. "..."
 end
 
--- Умный локальный ИИ-движок (работает без сбоев и интернета)
+-- Запрос к Gemini API
 local function GetAIResponse(prompt)
     local lower = prompt:lower()
     
-    -- Проверка на команды
     local targetName = lower:match("подойди%s+к%s+(.+)") or lower:match("иди%s+к%s+(.+)")
     if targetName then
         return ApproachPlayer(targetName)
     end
     
     if lower == "/help" then
-        return "Команды ИИ:\n1. 'подойди к [ник]' — идти к игроку\n2. 'скан' — проверка игроков на сервере\n3. Любой вопрос — обсудим!"
+        return "Команды:\n- Любой вопрос (ответит Gemini)\n- 'подойди к [ник]' (идти к игроку)"
+    end
+
+    local apiKey = "AQ.Ab8RN6Llx4HhrHNeBp6x7F6tk6eVWd5XvDVw-VVHHJymAgqz1A"
+    local url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" .. apiKey
+    
+    local requestData = {
+        contents = {
+            {
+                parts = {
+                    { text = "Ты игровой помощник в Roblox. Отвечай кратко, по делу и на русском языке: " .. prompt }
+                }
+            }
+        }
+    }
+    
+    local success, response = pcall(function()
+        local req = (http_request or request or HttpService.RequestAsync)
+        return req({
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(requestData)
+        })
+    end)
+    
+    if success and response then
+        local bodyText = response.Body or response.Data
+        if bodyText then
+            local successDecode, data = pcall(function()
+                return HttpService:JSONDecode(bodyText)
+            end)
+            if successDecode and data and data.candidates and data.candidates[1] then
+                local parts = data.candidates[1].content.parts
+                if parts and parts[1] then
+                    return parts[1].text
+                end
+            end
+        end
     end
     
-    if lower:find("скан") or lower:find("игроков") then
-        return "На сервере сейчас играет " .. #Players:GetPlayers() .. " человек. Твой ник: " .. LocalPlayer.Name
-    elseif lower:find("привет") or lower:find("здарова") or lower:find("хай") then
-        return "Привет-привет! Готов помогать тебе в игре и выполнять команды."
-    elseif lower:find("как дела") or lower:find("как ты") then
-        return "Все системы в норме, скрипт работает идеально! Как твои дела?"
-    elseif lower:find("кто ты") or lower:find("что ты умеешь") then
-        return "Я твой личный ИИ-ассистент в Roblox. Умею общаться, искать игроков, обходить препятствия и управлять персонажем!"
-    elseif lower:find("шутк") or lower:find("анекдот") then
-        return "Игрок заходит в Roblox Studio... а там нет багов. Шутка! Они везде :D"
-    elseif lower:find("спасибо") or lower:find("спс") then
-        return "Всегда пожалуйста! Обращайся ещё."
-    end
-    
-    -- Универсальный умный ответ
-    return "Отличный вопрос! Как твой ИИ-помощник в Roblox, я полностью одобряю эту идею. Напиши 'подойди к [ник]', если нужно кого-то найти!"
+    return "Не удалось связаться с Gemini. Проверь правильность ключа."
 end
 
 local function OnSubmit()
@@ -261,7 +286,6 @@ local function OnSubmit()
     InputBox.Text = ""
     
     task.spawn(function()
-        task.wait(0.2) -- имитация раздумий ИИ
         local reply = GetAIResponse(text)
         AddMsg("ai", reply)
     end)
@@ -270,4 +294,4 @@ end
 SendBtn.Activated:Connect(OnSubmit)
 InputBox.FocusLost:Connect(function(enter) if enter then OnSubmit() end end)
 
-print("Smart AI Assistant успешно запущен без ошибок!")
+print("Gemini AI Assistant успешно запущен!")
