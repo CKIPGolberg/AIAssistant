@@ -1,35 +1,24 @@
 --[[\
-    Gemini AI Assistant for Delta (Fixed)
+    Gemini AI Assistant for Delta (Ultra Stable)
 ]]--
 
 local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
-local PathfindingService = game:GetService("PathfindingService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local TextService = game:GetService("TextService")
-local HttpService = game:GetService("HttpService")
-local LocalPlayer = Players.LocalPlayer
+local PathfindingService = game:GetService("PathfindingService")
 
--- Очистка старого интерфейса
-if CoreGui:FindFirstChild("TrueAIChat") then
-    CoreGui.TrueAIChat:Destroy()
+-- Удаляем старый интерфейс, если он остался
+if PlayerGui:FindFirstChild("TrueAIChat") then
+    PlayerGui.TrueAIChat:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "TrueAIChat"
 ScreenGui.ResetOnSpawn = false
-
-pcall(function()
-    if gethui then 
-        ScreenGui.Parent = gethui()
-    else 
-        ScreenGui.Parent = CoreGui 
-    end
-end)
-
-if not ScreenGui.Parent then 
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") 
-end
+ScreenGui.Parent = PlayerGui
 
 -- Круглая кнопка
 local ToggleBtn = Instance.new("TextButton")
