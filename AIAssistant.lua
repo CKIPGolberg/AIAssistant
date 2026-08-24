@@ -1,5 +1,5 @@
 --[[\
-    Gemini AI Assistant for Delta (Ultra Stable)
+    Gemini AI Assistant for Delta (No Key Required)
 ]]--
 
 local Players = game:GetService("Players")
@@ -65,7 +65,7 @@ TopBar.ZIndex = 91
 TopBar.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "  🤖 GEMINI AI ASSISTANT"
+Title.Text = "  🤖 AI ASSISTANT"
 Title.Size = UDim2.new(1, -35, 1, 0)
 Title.BackgroundTransparency = 1
 Title.TextColor3 = Color3.fromRGB(0, 200, 255)
@@ -111,7 +111,7 @@ InputBox.Size = UDim2.new(1, -44, 0, 32)
 InputBox.Position = UDim2.new(0, 5, 1, -37)
 InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 32)
 InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-InputBox.PlaceholderText = "Спроси Gemini или 'подойди к [ник]'..."
+InputBox.PlaceholderText = "Спроси ИИ или 'подойди к [ник]'..."
 InputBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
 InputBox.Font = Enum.Font.SourceSans
 InputBox.TextSize = 12
@@ -180,7 +180,7 @@ local function AddMsg(sender, text)
     msgFrame.Parent = ChatScroll
 
     local msgLabel = Instance.new("TextLabel")
-    msgLabel.Text = (sender == "ai" and "[Gemini]: " or "[Вы]: ") .. text
+    msgLabel.Text = (sender == "ai" and "[ИИ]: " or "[Вы]: ") .. text
     msgLabel.Size = UDim2.new(1, 0, 1, 0)
     msgLabel.BackgroundTransparency = 1
     msgLabel.TextColor3 = sender == "ai" and Color3.fromRGB(0, 220, 255) or Color3.fromRGB(240, 240, 240)
@@ -201,7 +201,7 @@ end
 
 task.spawn(function()
     task.wait(0.3)
-    AddMsg("ai", "Привет! Я Gemini. Спроси меня о чем угодно или напиши 'подойди к [ник]'.")
+    AddMsg("ai", "Привет! Я твой ИИ-помощник. Спроси меня о чем угодно или напиши 'подойди к [ник]'.")
 end)
 
 -- Функция управления персонажем
@@ -248,7 +248,7 @@ local function ApproachPlayer(targetName)
     return "Строю путь к " .. targetPlayer.Name .. "..."
 end
 
--- Запрос к Gemini API
+-- Запрос к ИИ (без ключей)
 local function GetAIResponse(prompt)
     local lower = prompt:lower()
     
@@ -258,23 +258,16 @@ local function GetAIResponse(prompt)
     end
     
     if lower == "/help" then
-        return "Команды:\n- Любой вопрос (ответит Gemini)\n- 'подойди к [ник]' (идти к игроку)"
+        return "Команды:\n- Любой вопрос (ответит ИИ)\n- 'подойди к [ник]' (идти к игроку)"
     end
 
-    local p1 = "AQ.Ab8RN6Llx4HhrHNeBp6x7"
-    local p2 = "F6tk6eVWd5XvDVw-VVHHJymAgqz1A"
-    local apiKey = p1 .. p2
-    
-    local url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" .. apiKey
-    
+    local url = "https://text.pollinations.ai/"
     local requestData = {
-        contents = {
-            {
-                parts = {
-                    { text = "Ты игровой помощник в Roblox. Отвечай кратко, по делу и на русском языке: " .. prompt }
-                }
-            }
-        }
+        messages = {
+            { role = "system", content = "Ты игровой помощник в Roblox. Отвечай кратко, по делу и на русском языке." },
+            { role = "user", content = prompt }
+        },
+        model = "openai"
     }
     
     local success, response = pcall(function()
@@ -290,7 +283,7 @@ local function GetAIResponse(prompt)
     end)
     
     if not success then
-        return "Ошибка выполнения запроса: " .. tostring(response)
+        return "Ошибка запроса: " .. tostring(response)
     end
     
     if response then
@@ -298,30 +291,15 @@ local function GetAIResponse(prompt)
         local statusCode = response.StatusCode or response.Status
         
         if statusCode and statusCode ~= 200 then
-            return "Ошибка сервера (" .. tostring(statusCode) .. "): " .. tostring(bodyText)
+            return "Ошибка сервера (" .. tostring(statusCode) .. ")"
         end
         
-        if bodyText then
-            local successDecode, data = pcall(function()
-                return HttpService:JSONDecode(bodyText)
-            end)
-            if successDecode and data then
-                if data.error then
-                    return "Ошибка от Google: " .. tostring(data.error.message or "неизвестно")
-                end
-                if data.candidates and data.candidates[1] then
-                    local parts = data.candidates[1].content.parts
-                    if parts and parts[1] then
-                        return parts[1].text
-                    end
-                end
-            else
-                return "Ошибка декодирования ответа."
-            end
+        if bodyText and bodyText ~= "" then
+            return bodyText
         end
     end
     
-    return "Не удалось связаться с Gemini."
+    return "Не удалось получить ответ от ИИ."
 end
 
 local function OnSubmit()
@@ -339,4 +317,4 @@ end
 SendBtn.Activated:Connect(OnSubmit)
 InputBox.FocusLost:Connect(function(enter) if enter then OnSubmit() end end)
 
-print("Gemini AI Assistant успешно запущен!")
+print("AI Assistant успешно запущен без ключей!")
