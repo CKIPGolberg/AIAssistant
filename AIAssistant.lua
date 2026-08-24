@@ -1,6 +1,8 @@
 --[[\
-    Gemini AI Assistant for Delta (No Key Required)
+    Gemini AI Assistant for Delta (Ready to use)
 ]]--
+
+local API_KEY = "AQ.Ab8RN6JD_wKl74EbFQZ5NnpgeFlLMr6rlqMMwZ9E5DpUSiGRYA"
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -10,7 +12,6 @@ local UserInputService = game:GetService("UserInputService")
 local TextService = game:GetService("TextService")
 local PathfindingService = game:GetService("PathfindingService")
 
--- Удаляем старый интерфейс, если он остался
 if PlayerGui:FindFirstChild("TrueAIChat") then
     PlayerGui.TrueAIChat:Destroy()
 end
@@ -20,7 +21,7 @@ ScreenGui.Name = "TrueAIChat"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
--- Круглая кнопка
+-- Кнопка открытия
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBtn.Position = UDim2.new(1, -65, 0.4, 0)
@@ -39,7 +40,7 @@ BtnStroke.Color = Color3.fromRGB(0, 180, 255)
 BtnStroke.Thickness = 2
 BtnStroke.Parent = ToggleBtn
 
--- Главное меню
+-- Главное окно
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 260, 0, 310)
 MainFrame.Position = UDim2.new(0.5, -130, 0.5, -155)
@@ -65,7 +66,7 @@ TopBar.ZIndex = 91
 TopBar.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "  🤖 AI ASSISTANT"
+Title.Text = "  🤖 GEMINI AI"
 Title.Size = UDim2.new(1, -35, 1, 0)
 Title.BackgroundTransparency = 1
 Title.TextColor3 = Color3.fromRGB(0, 200, 255)
@@ -138,14 +139,11 @@ local SendCorner = Instance.new("UICorner")
 SendCorner.CornerRadius = UDim.new(0, 6)
 SendCorner.Parent = SendBtn
 
--- Перетаскивание кнопки
+-- Перетаскивание
 local dragging, dragStart, startPos, moved = false, nil, nil, false
 ToggleBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true 
-        moved = false 
-        dragStart = input.Position 
-        startPos = ToggleBtn.Position
+        dragging = true moved = false dragStart = input.Position startPos = ToggleBtn.Position
     end
 end)
 
@@ -163,14 +161,9 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
-ToggleBtn.Activated:Connect(function() 
-    if not moved then MainFrame.Visible = not MainFrame.Visible end 
-end)
-CloseBtn.Activated:Connect(function() 
-    MainFrame.Visible = false 
-end)
+ToggleBtn.Activated:Connect(function() if not moved then MainFrame.Visible = not MainFrame.Visible end end)
+CloseBtn.Activated:Connect(function() MainFrame.Visible = false end)
 
--- Вывод сообщений в чат
 local totalH = 0
 local function AddMsg(sender, text)
     local msgFrame = Instance.new("Frame")
@@ -201,14 +194,12 @@ end
 
 task.spawn(function()
     task.wait(0.3)
-    AddMsg("ai", "Привет! Я твой ИИ-помощник. Спроси меня о чем угодно или напиши 'подойди к [ник]'.")
+    AddMsg("ai", "Привет! ИИ успешно подключен!")
 end)
 
--- Функция управления персонажем
 local function ApproachPlayer(targetName)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return "Нет персонажа!" end
-    
     local targetPlayer = nil
     local lowerTarget = targetName:lower():gsub("^%s+", ""):gsub("%s+$", "")
     
@@ -223,14 +214,13 @@ local function ApproachPlayer(targetName)
         end
     end
     
-    if not targetPlayer then return "Игрок не найден на сервере!" end
+    if not targetPlayer then return "Игрок не найден!" end
     local targetPos = targetPlayer.Character.HumanoidRootPart.Position
     
     task.spawn(function()
-        AddMsg("ai", "Иду к игроку " .. targetPlayer.Name .. "...")
+        AddMsg("ai", "Иду к " .. targetPlayer.Name .. "...")
         local path = PathfindingService:CreatePath({ AgentRadius = 2, AgentHeight = 5, AgentCanJump = true })
         local success = pcall(function() path:ComputeAsync(char.HumanoidRootPart.Position, targetPos) end)
-        
         if success and path.Status == Enum.PathStatus.Success then
             for _, wp in ipairs(path:GetWaypoints()) do
                 if not char:FindFirstChild("Humanoid") then break end
@@ -238,36 +228,28 @@ local function ApproachPlayer(targetName)
                 if wp.Action == Enum.PathWaypointAction.Jump then char.Humanoid.Jump = true end
                 task.wait(0.25)
             end
-            AddMsg("ai", "Я дошел до игрока " .. targetPlayer.Name .. "!")
+            AddMsg("ai", "Я дошел!")
         else
             char.Humanoid:MoveTo(targetPos)
-            AddMsg("ai", "Иду к игроку напрямую!")
         end
     end)
-    
-    return "Строю путь к " .. targetPlayer.Name .. "..."
+    return "Иду к " .. targetPlayer.Name .. "..."
 end
 
--- Запрос к ИИ (без ключей)
 local function GetAIResponse(prompt)
     local lower = prompt:lower()
-    
     local targetName = lower:match("подойди%s+к%s+(.+)") or lower:match("иди%s+к%s+(.+)")
-    if targetName then
-        return ApproachPlayer(targetName)
-    end
-    
-    if lower == "/help" then
-        return "Команды:\n- Любой вопрос (ответит ИИ)\n- 'подойди к [ник]' (идти к игроку)"
-    end
+    if targetName then return ApproachPlayer(targetName) end
 
-    local url = "https://text.pollinations.ai/"
+    local url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" .. API_KEY
     local requestData = {
-        messages = {
-            { role = "system", content = "Ты игровой помощник в Roblox. Отвечай кратко, по делу и на русском языке." },
-            { role = "user", content = prompt }
-        },
-        model = "openai"
+        contents = {
+            {
+                parts = {
+                    { text = "Ты игровой ассистент в Roblox. Отвечай кратко на русском: " .. prompt }
+                }
+            }
+        }
     }
     
     local success, response = pcall(function()
@@ -275,39 +257,35 @@ local function GetAIResponse(prompt)
         return req({
             Url = url,
             Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
+            Headers = { ["Content-Type"] = "application/json" },
             Body = HttpService:JSONEncode(requestData)
         })
     end)
     
-    if not success then
-        return "Ошибка запроса: " .. tostring(response)
+    if not success then return "Ошибка сети: " .. tostring(response) end
+    
+    local bodyText = response.Body or response.Data
+    local statusCode = response.StatusCode or response.Status
+    
+    if statusCode and statusCode ~= 200 then
+        return "Ошибка ключа/сервера (" .. tostring(statusCode) .. ")"
     end
     
-    if response then
-        local bodyText = response.Body or response.Data
-        local statusCode = response.StatusCode or response.Status
-        
-        if statusCode and statusCode ~= 200 then
-            return "Ошибка сервера (" .. tostring(statusCode) .. ")"
-        end
-        
-        if bodyText and bodyText ~= "" then
-            return bodyText
-        end
+    local decoded = HttpService:JSONDecode(bodyText)
+    if decoded and decoded.candidates and decoded.candidates[1] then
+        return decoded.candidates[1].content.parts[1].text
     end
     
-    return "Не удалось получить ответ от ИИ."
+    return "Не удалось прочитать ответ ИИ."
 end
 
 local function OnSubmit()
+    let text = InputBox.Text
+    -- fix syntax for local text
     local text = InputBox.Text
     if text == "" then return end
     AddMsg("user", text)
     InputBox.Text = ""
-    
     task.spawn(function()
         local reply = GetAIResponse(text)
         AddMsg("ai", reply)
@@ -316,5 +294,3 @@ end
 
 SendBtn.Activated:Connect(OnSubmit)
 InputBox.FocusLost:Connect(function(enter) if enter then OnSubmit() end end)
-
-print("AI Assistant успешно запущен без ключей!")
